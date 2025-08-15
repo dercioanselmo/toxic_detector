@@ -5,6 +5,7 @@ import pandas as pd
 import torch
 from transformers import BertTokenizer, BertForSequenceClassification, Trainer, TrainingArguments
 from sklearn.metrics import precision_recall_fscore_support
+from datasets import Dataset
 from src.data.preprocess import load_and_preprocess
 import logging
 
@@ -18,11 +19,18 @@ logger.info(f"Using device: {device}")
 
 def prepare_dataset(X, y, tokenizer, max_length=128):
     try:
+        # Tokenize inputs
         encodings = tokenizer(X.tolist(), truncation=True, padding=True, max_length=max_length, return_tensors='pt')
-        labels = torch.tensor(y.values, dtype=torch.float32)
-        dataset = torch.utils.data.TensorDataset(
-            encodings['input_ids'], encodings['attention_mask'], labels
-        )
+        
+        # Create dictionary for Dataset
+        data_dict = {
+            'input_ids': encodings['input_ids'].tolist(),
+            'attention_mask': encodings['attention_mask'].tolist(),
+            'labels': y.values.tolist()
+        }
+        
+        # Create Hugging Face Dataset
+        dataset = Dataset.from_dict(data_dict)
         logger.info(f"Dataset prepared with {len(dataset)} samples")
         return dataset
     except Exception as e:
