@@ -7,7 +7,9 @@ import string
 import emoji
 import re
 from sklearn.model_selection import train_test_split
-from imbalancedlearn.over_sampling import RandomOverSampler
+#from imblearn.over_sampling import RandomOverSampler
+from imbalanced_learn.over_sampling import RandomOverSampler
+
 
 nltk.download('stopwords', quiet=True)
 nltk.download('wordnet', quiet=True)
