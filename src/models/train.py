@@ -8,6 +8,7 @@ from sklearn.metrics import precision_recall_fscore_support
 from datasets import Dataset
 from src.data.preprocess import load_and_preprocess
 import logging
+import numpy as np
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -22,16 +23,20 @@ def prepare_dataset(X, y, tokenizer, max_length=128):
         # Tokenize inputs
         encodings = tokenizer(X.tolist(), truncation=True, padding=True, max_length=max_length)
         
+        # Ensure labels are float32
+        labels = y.values.astype(np.float32)  # Convert to float32
+        logger.info(f"Label type: {labels.dtype}, shape: {labels.shape}")
+        
         # Create dictionary for Dataset
         data_dict = {
             'input_ids': encodings['input_ids'],
             'attention_mask': encodings['attention_mask'],
-            'labels': y.values.tolist()  # Keep labels as [num_samples, 7]
+            'labels': labels.tolist()  # Convert to list for Dataset
         }
         
         # Create Hugging Face Dataset
         dataset = Dataset.from_dict(data_dict)
-        logger.info(f"Dataset prepared with {len(dataset)} samples, label shape: {y.shape}")
+        logger.info(f"Dataset prepared with {len(dataset)} samples, label shape: {labels.shape}")
         return dataset
     except Exception as e:
         logger.error(f"Error preparing dataset: {str(e)}")
