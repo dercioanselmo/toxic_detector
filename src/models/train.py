@@ -3,7 +3,7 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 import pandas as pd
 import torch
-from transformers import BertTokenizer, BertForSequenceClassification, Trainer, TrainingArguments
+from transformers import BertTokenizer, BertForSequenceClassification, Trainer, TrainingArguments, DataCollatorWithPadding
 from sklearn.metrics import precision_recall_fscore_support
 from datasets import Dataset
 from src.data.preprocess import load_and_preprocess
@@ -20,18 +20,18 @@ logger.info(f"Using device: {device}")
 def prepare_dataset(X, y, tokenizer, max_length=128):
     try:
         # Tokenize inputs
-        encodings = tokenizer(X.tolist(), truncation=True, padding=True, max_length=max_length, return_tensors='pt')
+        encodings = tokenizer(X.tolist(), truncation=True, padding=True, max_length=max_length)
         
         # Create dictionary for Dataset
         data_dict = {
-            'input_ids': encodings['input_ids'].tolist(),
-            'attention_mask': encodings['attention_mask'].tolist(),
-            'labels': y.values.tolist()
+            'input_ids': encodings['input_ids'],
+            'attention_mask': encodings['attention_mask'],
+            'labels': y.values.tolist()  # Keep labels as [num_samples, 7]
         }
         
         # Create Hugging Face Dataset
         dataset = Dataset.from_dict(data_dict)
-        logger.info(f"Dataset prepared with {len(dataset)} samples")
+        logger.info(f"Dataset prepared with {len(dataset)} samples, label shape: {y.shape}")
         return dataset
     except Exception as e:
         logger.error(f"Error preparing dataset: {str(e)}")
@@ -66,7 +66,8 @@ def train_model():
         tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
         model = BertForSequenceClassification.from_pretrained(
             'bert-base-uncased',
-            num_labels=7  # toxic, severe_toxic, obscene, threat, insult, identity_hate, neutral
+            num_labels=7,  # toxic, severe_toxic, obscene, threat, insult, identity_hate, neutral
+            problem_type="multi_label_classification"  # Specify multi-label classification
         ).to(device)
     except Exception as e:
         logger.error(f"Error initializing model or tokenizer: {str(e)}")
@@ -102,6 +103,9 @@ def train_model():
         logger.error(f"Error setting up training arguments: {str(e)}")
         raise
 
+    # Initialize data collator
+    data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
+
     # Initialize trainer
     logger.info("Initializing trainer...")
     try:
@@ -110,6 +114,7 @@ def train_model():
             args=training_args,
             train_dataset=train_dataset,
             eval_dataset=val_dataset,
+            data_collator=data_collator,
             compute_metrics=compute_metrics
         )
     except Exception as e:
