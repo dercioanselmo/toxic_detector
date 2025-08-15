@@ -1,9 +1,11 @@
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 import pandas as pd
 import torch
 from transformers import BertTokenizer, BertForSequenceClassification, Trainer, TrainingArguments
 from sklearn.metrics import precision_recall_fscore_support
 from src.data.preprocess import load_and_preprocess
-import os
 
 # Set device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
