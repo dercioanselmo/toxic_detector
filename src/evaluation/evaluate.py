@@ -1,9 +1,10 @@
 import pandas as pd
 import torch
-from transformers import BertTokenizer, BertForSequenceClassification, Trainer, TrainingArguments
+from transformers import BertTokenizer, BertForSequenceClassification, Trainer, TrainingArguments, DataCollatorWithPadding
 from sklearn.metrics import precision_recall_fscore_support
 from datasets import Dataset
 import logging
+import numpy as np
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -11,14 +12,29 @@ logger = logging.getLogger(__name__)
 
 def prepare_dataset(X, y, tokenizer, max_length=128):
     try:
-        encodings = tokenizer(X.tolist(), truncation=True, padding=True, max_length=max_length)
+        # Convert to strings and handle NaN
+        X_clean = X.fillna('').astype(str).tolist()
+        if not all(isinstance(x, str) for x in X_clean):
+            logger.warning("Non-string values found in input, converting to strings")
+            X_clean = [str(x) for x in X_clean]
+        
+        # Tokenize inputs
+        encodings = tokenizer(X_clean, truncation=True, padding=True, max_length=max_length)
+        
+        # Ensure labels are float32
+        labels = y.values.astype(np.float32)
+        logger.info(f"Label type: {labels.dtype}, shape: {labels.shape}")
+        
+        # Create dictionary for Dataset
         data_dict = {
             'input_ids': encodings['input_ids'],
             'attention_mask': encodings['attention_mask'],
-            'labels': y.values.astype(float).tolist()
+            'labels': labels.tolist()
         }
+        
+        # Create Hugging Face Dataset
         dataset = Dataset.from_dict(data_dict)
-        logger.info(f"Dataset prepared with {len(dataset)} samples, label shape: {y.shape}")
+        logger.info(f"Dataset prepared with {len(dataset)} samples, label shape: {labels.shape}")
         return dataset
     except Exception as e:
         logger.error(f"Error preparing dataset: {str(e)}")
@@ -63,12 +79,16 @@ def evaluate_model():
             eval_strategy="no",
         )
 
+        # Initialize data collator
+        data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
+
         # Initialize trainer
         logger.info("Initializing trainer...")
         trainer = Trainer(
             model=model,
             args=training_args,
             eval_dataset=test_dataset,
+            data_collator=data_collator,
             compute_metrics=compute_metrics
         )
 
