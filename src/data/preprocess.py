@@ -8,6 +8,7 @@ import emoji
 import re
 from sklearn.model_selection import train_test_split
 from imblearn.over_sampling import RandomOverSampler
+import csv
 
 nltk.download('stopwords', quiet=True)
 nltk.download('wordnet', quiet=True)
@@ -50,7 +51,7 @@ def load_and_preprocess():
 
     print("Loading Arabic dataset...")
     try:
-        df_ar = pd.read_csv('data/arabic/l_hsab.csv')
+        df_ar = pd.read_csv('data/arabic/l_hsab.csv', quoting=csv.QUOTE_ALL, encoding='utf-8')
         print(f"Arabic dataset shape: {df_ar.shape}")
         print(f"Arabic columns: {df_ar.columns.tolist()}")
         df_ar['Tweet'] = df_ar['Tweet'].apply(preprocess_text, lang='ar')
