@@ -7,10 +7,7 @@ import string
 import emoji
 import re
 from sklearn.model_selection import train_test_split
-#from imblearn.over_sampling import RandomOverSampler
-#from imbalanced_learn.over_sampling import RandomOverSampler
 from imblearn.over_sampling import RandomOverSampler
-
 
 nltk.download('stopwords', quiet=True)
 nltk.download('wordnet', quiet=True)
@@ -47,15 +44,15 @@ def load_and_preprocess():
 
     # Arabic
     df_ar = pd.read_csv('data/arabic/l_hsab.csv')
-    df_ar['Text'] = df_ar['Text'].apply(preprocess_text, lang='ar')  # Assume column 'Text'
-    # Assume column 'Label' with 'Normal', 'Abusive', 'Hate'
+    df_ar['Tweet'] = df_ar['Tweet'].apply(preprocess_text, lang='ar')  # Use 'Tweet' column
+    # Map 'Class' (normal, abusive, hate) to multi-label format
     label_mapping = {
-        'Normal': [0,0,0,0,0,0,1],  # neutral
-        'Abusive': [1,0,1,0,1,0,0],  # toxic, obscene, insult
-        'Hate': [1,1,0,1,0,1,0]  # toxic, severe_toxic, threat, identity_hate
+        'normal': [0, 0, 0, 0, 0, 0, 1],  # neutral
+        'abusive': [1, 0, 1, 0, 1, 0, 0],  # toxic, obscene, insult
+        'hate': [1, 1, 0, 1, 0, 1, 0]  # toxic, severe_toxic, threat, identity_hate
     }
-    y_ar = pd.DataFrame([label_mapping[label] for label in df_ar['Label']], columns=['toxic', 'severe_toxic', 'obscene', 'threat', 'insult', 'identity_hate', 'neutral'])
-    X_ar = df_ar['Text']
+    y_ar = pd.DataFrame([label_mapping[label.lower()] for label in df_ar['Class']], columns=['toxic', 'severe_toxic', 'obscene', 'threat', 'insult', 'identity_hate', 'neutral'])
+    X_ar = df_ar['Tweet']
     X_train_ar, X_temp_ar, y_train_ar, y_temp_ar = train_test_split(X_ar, y_ar, test_size=0.2, random_state=42)
     X_val_ar, X_test_ar, y_val_ar, y_test_ar = train_test_split(X_temp_ar, y_temp_ar, test_size=0.5, random_state=42)
 
